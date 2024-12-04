@@ -1,6 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
-const { Client, Collection, Events, GatewayIntentBits, Guild } = require('discord.js');
+const { Client, Collection, Events, GatewayIntentBits, Guild, ActivityType } = require('discord.js');
 const { token } = require('./config.json');
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
@@ -23,9 +23,20 @@ for (const folder of commandFolders) {
 	}
 }
 
-client.once(Events.ClientReady, () => {
-	console.log('Ready!');
+client.on('ready', () => {
+	console.log('Ready')
+	client.user.setActivity(`${client.guilds.cache.size} servers to serve`, { type: ActivityType.Watching });
+})
+
+client.on("guildCreate", guild => {
+	console.log(`New guild: ${guild.name}`)
+    client.user.setActivity(`${client.guilds.cache.size} servers to serve`, { type: ActivityType.Watching });
 });
+
+client.on("guildDelete", guild => {
+	console.log(`A guild removed the bot: ${guild.name}`)
+    client.user.setActivity(`${client.guilds.cache.size} servers to serve`, { type: ActivityType.Watching });
+})
 
 client.on(Events.InteractionCreate, async interaction => {
 	if (!interaction.isChatInputCommand()) return;
