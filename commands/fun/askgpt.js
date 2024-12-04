@@ -1,13 +1,10 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
-const { Configuration, OpenAIApi } = require('openai');
-const { apiKey } = require('../../config.json')
-require('dotenv/config')
+const { OpenAI } = require('openai');
+const { apiKey } = require('../../config.json');
 
-const configuration = new Configuration({
+const openai = new OpenAI({
     apiKey: apiKey
 })
-const openai = new OpenAIApi(configuration)
-
 module.exports = {
 	data: new SlashCommandBuilder()
 		.setName('askgpt')
@@ -22,47 +19,49 @@ module.exports = {
         await interaction.deferReply();
 
         let query = interaction.options.getString('query');
-        let context = [{ role: 'system', content: 'You are a cool and fun Discord bot on a F1 Discord Community of over 60.000 people on it' }];
+        let context = [{ role: 'system', content: 'You are a cool and fun Discord bot. You are present on multiples servers' }];
+
+        console.log(`Request sent: "${query}" on ${interaction.guild.name}`);
         
         context.push({
             role: 'user',
             content: query
         });
 
-        const answer = await openai.createChatCompletion({
-            model: 'gpt-3.5-turbo',
+        const answer = await openai.chat.completions.create({
             messages: context,
-            max_tokens: 450
+            model: "gpt-3.5-turbo",
         });
+        console.log(answer);
+        console.log(answer.choices[0].message.content);
 
 		try {
-            if(answer.data.choices[0].message.content.length > 2000) {
+            if(answer.choices[0].message.content.length > 2000) {
                 console.log('CHECKPOINT ONE ✓');
-                console.log('Length: ' + answer.data.choices[0].message.content.length);
-                let answerSplitted1 = answer.data.choices[0].message.content.slice(0, 2000);
-                let answerSplitted2 = answer.data.choices[0].message.content.slice(2000);
+                console.log('Length: ' + answer.choices[0].message.content.length);
+                let answerSplitted1 = answer.choices[0].message.content.slice(0, 2000);
+                let answerSplitted2 = answer.choices[0].message.content.slice(2000);
+                await interaction.editReply(answerSplitted1).then(
+                    await interaction.channel.send(answerSplitted2)
+                );
 
                 if(answerSplitted2.length > 2000) {
                     console.log('CHECKPOINT TWO ✓')
-                    let answerSplitted3 = answer.data.choices[0].message.content.slice(4000);
-                    answerSplitted2 = answer.data.choices[0].message.content.slice(2000, 4000);
+                    let answerSplitted3 = answer.choices[0].message.content.slice(4000);
+                    answerSplitted2 = answer.choices[0].message.content.slice(2000, 4000);
                     await interaction.editReply(answerSplitted1).then(
                         await interaction.channel.send(answerSplitted2).then(
                             await interaction.channel.send(answerSplitted3)
                         )
                     );
-                } else {
-                    await interaction.editReply(answerSplitted1).then(
-                        await interaction.channel.send(answerSplitted2)
-                    );
                 }
             } else {
-                await interaction.editReply(answer.data.choices[0].message);
-            };
+                await interaction.editReply(answer.choices[0].message.content);
+            }
             
         } catch (err) {
             console.error(err)
-            await interaction.reply({ content: 'Sorry, there was a problem, please try again later', ephemeral: true })
+            await interaction.editReply({ content: 'Sorry, there was a problem, please try again later', ephemeral: true })
         }
 	},
 };
